@@ -1,0 +1,246 @@
+{% extends "base.html" %}
+
+{% block title %}Results & Prediction History - Network Attack Severity Prediction System{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Operational Results & Prediction History</h1>
+    <p class="page-subtitle">Telemetry prediction logs, aggregate statistics, and model deployment analytics stored in SQLite.</p>
+</div>
+
+<!-- Stats Row -->
+<div class="grid-4" style="margin-bottom: 2rem;">
+    <div class="stat-card">
+        <span class="stat-label">Total Predictions Logged</span>
+        <span class="stat-value">{{ "{:,}".format(total_predictions) }}</span>
+        <span class="stat-sub">Across interactive & batch tests</span>
+    </div>
+    <div class="stat-card highlight">
+        <span class="stat-label">Production Model</span>
+        <span class="stat-value" style="font-size: 1.5rem;">{{ best_model }}</span>
+        <span class="stat-sub">Top ranked by validation F1</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-label">High / Critical Alerts</span>
+        <span class="stat-value" style="color: var(--sev-crit);">
+            {{ (severity_dist.get('HIGH', 0) + severity_dist.get('CRITICAL', 0)) }}
+        </span>
+        <span class="stat-sub">Requiring immediate containment</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-label">Routine / Benign Flows</span>
+        <span class="stat-value" style="color: var(--sev-low);">
+            {{ severity_dist.get('LOW', 0) }}
+        </span>
+        <span class="stat-sub">Normal authorized traffic</span>
+    </div>
+</div>
+
+<!-- History Analytics Charts -->
+<div class="grid-2">
+    <!-- Severity Chart -->
+    <div class="card">
+        <div class="card-header">
+            <div>
+                <h3 class="card-title">Historical Severity Distribution</h3>
+                <p class="card-desc">Breakdown of all predictions by priority tier</p>
+            </div>
+        </div>
+        <div style="height: 260px; position: relative;">
+            <canvas id="historySeverityChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Attack Type Chart -->
+    <div class="card">
+        <div class="card-header">
+            <div>
+                <h3 class="card-title">Historical Attack Types</h3>
+                <p class="card-desc">Breakdown of specific attack signatures identified</p>
+            </div>
+        </div>
+        <div style="height: 260px; position: relative;">
+            <canvas id="historyAttackChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Model Performance Quick Reference Card -->
+<div class="card">
+    <div class="card-header">
+        <div>
+            <h3 class="card-title">Model Performance Summary Reference</h3>
+            <p class="card-desc">Validation metrics for the 5 comparative algorithms</p>
+        </div>
+        <a href="{{ url_for('models_page') }}" class="btn btn-secondary btn-sm">Full Benchmark View &rarr;</a>
+    </div>
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Algorithm</th>
+                    <th>Accuracy</th>
+                    <th>Precision</th>
+                    <th>Recall</th>
+                    <th>F1-Score</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for name, m in models.items() %}
+                <tr class="{% if name == best_model %}row-best{% endif %}">
+                    <td>
+                        <strong>{{ name }}</strong>
+                        {% if name == best_model %}
+                            <span class="badge badge-low" style="margin-left: 6px;">Active Best</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ m.accuracy }}%</td>
+                    <td>{{ m.precision }}%</td>
+                    <td>{{ m.recall }}%</td>
+                    <td>{{ m.f1_score }}%</td>
+                    <td>
+                        {% if m.f1_score >= 80 %}
+                            <span class="badge badge-low">Optimal</span>
+                        {% elif m.f1_score >= 70 %}
+                            <span class="badge badge-blue">Acceptable</span>
+                        {% else %}
+                            <span class="badge badge-medium">Baseline</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Prediction History Table -->
+<div class="card">
+    <div class="card-header">
+        <div>
+            <h3 class="card-title">Recent Prediction Audit Log (Last 100 Flows)</h3>
+            <p class="card-desc">Persistent records stored in SQLite (<span class="code-text">predictions.db</span>)</p>
+        </div>
+        {% if history %}
+        <form method="POST" action="{{ url_for('clear_history') }}" onsubmit="return confirm('Are you sure you want to clear the prediction history?');">
+            <button type="submit" class="btn btn-danger btn-sm">🗑️ Clear History</button>
+        </form>
+        {% endif %}
+    </div>
+
+    {% if history %}
+    <div class="table-responsive" style="max-height: 400px;">
+        <table class="data-table" style="font-size: 0.85rem;">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Timestamp</th>
+                    <th>Model</th>
+                    <th>Predicted Severity</th>
+                    <th>Predicted Attack</th>
+                    <th>Confidence</th>
+                    <th>proto</th>
+                    <th>service</th>
+                    <th>state</th>
+                    <th>dur</th>
+                    <th>rate</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in history %}
+                <tr>
+                    <td>{{ log.id }}</td>
+                    <td style="color: var(--text-secondary); white-space: nowrap;">{{ log.timestamp }}</td>
+                    <td><strong>{{ log.model_used }}</strong></td>
+                    <td>
+                        <span class="badge badge-{{ log.predicted_severity | lower }}">
+                            {{ log.predicted_severity }}
+                        </span>
+                    </td>
+                    <td>{{ log.predicted_attack }}</td>
+                    <td>
+                        {% if log.confidence %}
+                            {{ log.confidence }}%
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td><span class="code-text">{{ log.proto }}</span></td>
+                    <td>{{ log.service }}</td>
+                    <td><span class="badge badge-gray">{{ log.state }}</span></td>
+                    <td>{{ "%.4f" | format(log.dur | float) }}</td>
+                    <td>{{ "%.1f" | format(log.rate | float) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div style="text-align: center; padding: 2.5rem; color: var(--text-secondary);">
+        <p style="font-size: 1.1rem; margin-bottom: 0.5rem;">No predictions recorded yet.</p>
+        <p style="font-size: 0.9rem;">
+            Head over to the <a href="{{ url_for('predict_page') }}" style="color: var(--primary); font-weight: 600;">Predict Page</a> to test single flows or upload a CSV!
+        </p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const severityDist = {{ severity_dist | tojson }};
+        const attackDist = {{ attack_dist | tojson }};
+
+        // Severity Distribution
+        const ctxSev = document.getElementById('historySeverityChart');
+        if (ctxSev && Object.keys(severityDist).length > 0) {
+            const labels = Object.keys(severityDist);
+            const data = Object.values(severityDist);
+            const colors = labels.map(l => SEVERITY_COLORS[l] || '#94a3b8');
+
+            new Chart(ctxSev, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: colors,
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom' } }
+                }
+            });
+        }
+
+        // Attack Type Distribution
+        const ctxAtk = document.getElementById('historyAttackChart');
+        if (ctxAtk && Object.keys(attackDist).length > 0) {
+            new Chart(ctxAtk, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(attackDist),
+                    datasets: [{
+                        label: 'Predictions',
+                        data: Object.values(attackDist),
+                        backgroundColor: '#6366f1',
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

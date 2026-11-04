@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Network Attack Severity Prediction System{% endblock %}</title>
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <!-- Chart.js for ML Visualizations -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <a href="{{ url_for('home') }}" class="nav-brand">
+            <div class="brand-icon">📊</div>
+            <span class="brand-title">Network Attack Severity Prediction System</span>
+        </a>
+        <ul class="nav-links">
+            <li><a href="{{ url_for('home') }}" class="nav-link {% if request.path == '/' %}active{% endif %}">Home</a></li>
+            <li><a href="{{ url_for('dataset_page') }}" class="nav-link {% if request.path == '/dataset' %}active{% endif %}">Dataset</a></li>
+            <li><a href="{{ url_for('models_page') }}" class="nav-link {% if request.path == '/models' %}active{% endif %}">Model Comparison</a></li>
+            <li><a href="{{ url_for('predict_page') }}" class="nav-link {% if request.path == '/predict' %}active{% endif %}">Predict</a></li>
+            <li><a href="{{ url_for('upload_page') }}" class="nav-link {% if request.path == '/upload' %}active{% endif %}">CSV Upload</a></li>
+        </ul>
+    </nav>
+
+    <!-- Main Content Container -->
+    <main class="main-content">
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+   
+    <!-- Scripts -->
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

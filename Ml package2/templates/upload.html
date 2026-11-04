@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+
+{% block title %}CSV Upload - Network Attack Severity Prediction System{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">CSV Upload</h1>
+    <p class="page-subtitle">Upload a CSV file containing network traffic data to predict attack severity.</p>
+</div>
+
+<!-- Upload Form Card -->
+<div class="card">
+    <div class="card-header">
+        <div>
+            <h2 class="card-title">Upload CSV File</h2>
+            <p class="card-desc">Select a CSV file containing network flow records</p>
+        </div>
+        <div>
+            <a href="{{ url_for('download_sample_csv') }}" class="btn btn-secondary btn-sm">
+                Download Sample CSV
+            </a>
+        </div>
+    </div>
+
+    <form method="POST" action="{{ url_for('upload_page') }}" enctype="multipart/form-data">
+        <div class="grid-2" style="align-items: center;">
+            <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label" for="csv_file">Choose CSV File:</label>
+                <input type="file" name="csv_file" id="csv_file" class="form-control" accept=".csv" required>
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label" for="model_name">Select Model:</label>
+                <select name="model_name" id="model_name" class="form-control" style="font-weight: 600;">
+                    {% for m in available_models %}
+                    <option value="{{ m }}" {% if m == selected_model %}selected{% endif %}>
+                        {{ m }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <div style="margin-top: 1.5rem; display: flex; gap: 1rem; align-items: center;">
+            <button type="submit" class="btn btn-primary" style="padding: 0.65rem 1.8rem;">
+                Predict
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Results Section (If CSV Uploaded & Processed) -->
+{% if results_table %}
+<div class="card">
+    <div class="card-header">
+        <div>
+            <h2 class="card-title">Prediction Results ({{ total_processed }} records)</h2>
+            <p class="card-desc">Predictions generated using <strong>{{ selected_model }}</strong></p>
+        </div>
+        <a href="{{ url_for('download_predictions') }}" class="btn btn-primary btn-sm">
+            Download Predictions as CSV
+        </a>
+    </div>
+
+    <!-- Severity Distribution Chart & Table -->
+    <div class="grid-2" style="margin-bottom: 1.75rem;">
+        <div>
+            <h3 style="font-size: 1rem; color: var(--bg-header); margin-bottom: 0.75rem;">Severity Distribution</h3>
+            <div style="height: 240px; position: relative;">
+                <canvas id="batchSeverityChart"></canvas>
+            </div>
+        </div>
+
+        <div>
+            <h3 style="font-size: 1rem; color: var(--bg-header); margin-bottom: 0.75rem;">Severity Summary</h3>
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Severity Level</th>
+                            <th>Count</th>
+                            <th>Percentage</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for sev in ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'] %}
+                        {% set count = severity_distribution.get(sev, 0) %}
+                        <tr>
+                            <td><span class="badge badge-{{ sev | lower }}">{{ sev }}</span></td>
+                            <td><strong>{{ count }}</strong></td>
+                            <td>{{ "%.1f" | format((count / total_processed) * 100) if total_processed > 0 else 0 }}%</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Preview Table -->
+    <h3 style="font-size: 1rem; color: var(--bg-header); margin-bottom: 0.75rem;">
+        Prediction Results Table (First 50 Records)
+    </h3>
+    <div class="table-responsive" style="max-height: 450px;">
+        <table class="data-table" style="font-size: 0.84rem;">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Predicted Severity</th>
+                    <th>Predicted Attack</th>
+                    <th>Confidence</th>
+                    <th>proto</th>
+                    <th>service</th>
+                    <th>state</th>
+                    <th>dur</th>
+                    <th>sbytes</th>
+                    <th>dbytes</th>
+                    <th>rate</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in results_table %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td>
+                        <span class="badge badge-{{ row.Predicted_Severity | lower }}">
+                            {{ row.Predicted_Severity }}
+                        </span>
+                    </td>
+                    <td><strong>{{ row.Predicted_Attack }}</strong></td>
+                    <td>
+                        {% if row['Confidence_%'] is defined and row['Confidence_%'] is not none %}
+                            {{ row['Confidence_%'] }}%
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td><span class="code-text">{{ row.proto }}</span></td>
+                    <td>{{ row.service }}</td>
+                    <td><span class="badge badge-gray">{{ row.state }}</span></td>
+                    <td>{{ "%.4f" | format(row.dur | float) }}</td>
+                    <td>{{ row.sbytes }}</td>
+                    <td>{{ row.dbytes }}</td>
+                    <td>{{ "%.1f" | format(row.rate | float) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if severity_distribution %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const severityDist = {{ severity_distribution | tojson }};
+        initUploadCharts(severityDist);
+    });
+</script>
+{% endif %}
+{% endblock %}

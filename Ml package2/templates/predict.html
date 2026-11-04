@@ -1,0 +1,222 @@
+{% extends "base.html" %}
+
+{% block title %}Predict - Network Attack Severity Prediction System{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Predict Attack Severity</h1>
+    <p class="page-subtitle">Enter network traffic features to predict attack type and severity level.</p>
+</div>
+
+<!-- Prediction Result Card (Displayed After Clicking Predict) -->
+{% if result %}
+<div class="prediction-box sev-{{ result.predicted_severity }}">
+    <div class="result-main">
+        <div>
+            <span class="result-severity-title">Predicted Severity</span>
+            <div class="result-severity-value">
+                <span class="badge badge-{{ result.predicted_severity | lower }}" style="font-size: 1.4rem; padding: 0.35rem 1.1rem; vertical-align: middle;">
+                    {{ result.predicted_severity }}
+                </span>
+            </div>
+        </div>
+        <div style="text-align: right;">
+            <span class="result-severity-title">Model Used</span>
+            <div style="font-size: 1.15rem; font-weight: 700; color: var(--text-primary); margin-top: 0.25rem;">
+                {{ result.model_used }}
+            </div>
+        </div>
+    </div>
+
+    <div class="result-details" style="grid-template-columns: repeat(3, 1fr);">
+        <div class="result-detail-item">
+            <span class="result-detail-label">Predicted Attack Type</span>
+            <div class="result-detail-val">{{ result.predicted_attack }}</div>
+        </div>
+        <div class="result-detail-item">
+            <span class="result-detail-label">Predicted Severity</span>
+            <div class="result-detail-val">{{ result.predicted_severity }}</div>
+        </div>
+        <div class="result-detail-item">
+            <span class="result-detail-label">Confidence</span>
+            <div class="result-detail-val">
+                {% if result.confidence is not none %}
+                    {{ result.confidence }}%
+                {% else %}
+                    N/A (Linear Decision Boundary)
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Probability Breakdown (If available) -->
+    {% if result.probabilities %}
+    <div class="confidence-bar-container">
+        <div style="display: flex; justify-content: space-between; font-size: 0.82rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.35rem;">
+            <span>Class Probabilities:</span>
+            <span>
+                {% for cls, prob in result.probabilities.items() %}
+                    <span style="margin-left: 0.75rem;">{{ cls }}: <strong>{{ prob }}%</strong></span>
+                {% endfor %}
+            </span>
+        </div>
+        {% if result.confidence is not none %}
+        <div class="confidence-bar-bg">
+            <div class="confidence-bar-fill" style="width: {{ result.confidence }}%;"></div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+
+<!-- Quick Sample Presets -->
+<div class="presets-container">
+    <div class="preset-header">
+        <span class="preset-title">Load Sample Data</span>
+        <span style="font-size: 0.8rem; color: var(--text-secondary);">Click a sample to fill the form with values from the dataset:</span>
+    </div>
+    <div class="preset-buttons">
+        <button type="button" class="btn-preset" data-preset="normal">Load Normal Sample (LOW)</button>
+        <button type="button" class="btn-preset" data-preset="probe">Load Reconnaissance Sample (MEDIUM)</button>
+        <button type="button" class="btn-preset" data-preset="dos">Load DoS Sample (HIGH)</button>
+        <button type="button" class="btn-preset" data-preset="critical">Load Shellcode Sample (CRITICAL)</button>
+    </div>
+</div>
+
+<!-- Input Form Card -->
+<div class="card">
+    <div class="card-header">
+        <div>
+            <h2 class="card-title">Input Network Features</h2>
+            <p class="card-desc">Enter network traffic values to make a prediction</p>
+        </div>
+    </div>
+
+    <form method="POST" action="{{ url_for('predict_page') }}">
+        <!-- Model Selection -->
+        <div class="card" style="background-color: #f8fafc; border-color: #cbd5e1; padding: 1rem; margin-bottom: 1.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                <div>
+                    <label for="model_name" style="font-weight: 700; font-size: 0.95rem; color: var(--bg-header);">
+                        Select Algorithm:
+                    </label>
+                    <p style="font-size: 0.82rem; color: var(--text-secondary);">
+                        Choose which algorithm to use for prediction
+                    </p>
+                </div>
+                <div style="min-width: 220px;">
+                    <select name="model_name" id="model_name" class="form-control" style="font-weight: 600;">
+                        {% for m in available_models %}
+                        <option value="{{ m }}" {% if m == selected_model %}selected{% endif %}>
+                            {{ m }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Group 1: Protocol & Connection Properties -->
+        <h3 style="font-size: 0.95rem; color: var(--bg-header); border-bottom: 1px solid var(--border-color); padding-bottom: 0.4rem; margin-bottom: 1rem;">
+            Protocol and State
+        </h3>
+        <div class="grid-3">
+            <div class="form-group">
+                <label class="form-label" for="input_proto">Protocol <span class="unit">(proto)</span></label>
+                <select name="proto" id="input_proto" class="form-control">
+                    {% for p in ['tcp', 'udp', 'arp', 'ospf', 'icmp', 'rsvp', 'sctp'] %}
+                    <option value="{{ p }}" {% if form_values.get('proto') == p %}selected{% endif %}>{{ p }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="input_service">Service <span class="unit">(service)</span></label>
+                <select name="service" id="input_service" class="form-control">
+                    {% for s in ['-', 'http', 'dns', 'ftp', 'smtp', 'ssh', 'ftp-data', 'pop3', 'ssl', 'snmp'] %}
+                    <option value="{{ s }}" {% if form_values.get('service') == s %}selected{% endif %}>{{ s }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="input_state">Connection State <span class="unit">(state)</span></label>
+                <select name="state" id="input_state" class="form-control">
+                    {% for st in ['FIN', 'INT', 'CON', 'REQ', 'RST', 'ACC'] %}
+                    <option value="{{ st }}" {% if form_values.get('state') == st %}selected{% endif %}>{{ st }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <!-- Group 2: Duration, Rate, Port Counts -->
+        <h3 style="font-size: 0.95rem; color: var(--bg-header); border-bottom: 1px solid var(--border-color); padding-bottom: 0.4rem; margin: 1.25rem 0 1rem;">
+            Duration and Flow Rate
+        </h3>
+        <div class="grid-3">
+            <div class="form-group">
+                <label class="form-label" for="input_dur">Duration <span class="unit">(seconds)</span></label>
+                <input type="number" step="any" name="dur" id="input_dur" class="form-control" value="{{ form_values.get('dur', 0.0) }}" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="input_rate">Flow Rate <span class="unit">(packets/sec)</span></label>
+                <input type="number" step="any" name="rate" id="input_rate" class="form-control" value="{{ form_values.get('rate', 0.0) }}" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="input_ct_src_dport_ltm">Connections to Destination Port <span class="unit">(count)</span></label>
+                <input type="number" step="1" name="ct_src_dport_ltm" id="input_ct_src_dport_ltm" class="form-control" value="{{ form_values.get('ct_src_dport_ltm', 1) }}" required>
+            </div>
+        </div>
+
+        <!-- Group 3: Packet Counts & Bytes -->
+        <h3 style="font-size: 0.95rem; color: var(--bg-header); border-bottom: 1px solid var(--border-color); padding-bottom: 0.4rem; margin: 1.25rem 0 1rem;">
+            Packet and Byte Counts
+        </h3>
+        <div class="grid-4">
+            <div class="form-group">
+                <label class="form-label" for="input_spkts">Source Packets <span class="unit">(spkts)</span></label>
+                <input type="number" step="1" name="spkts" id="input_spkts" class="form-control" value="{{ form_values.get('spkts', 10) }}" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="input_dpkts">Destination Packets <span class="unit">(dpkts)</span></label>
+                <input type="number" step="1" name="dpkts" id="input_dpkts" class="form-control" value="{{ form_values.get('dpkts', 10) }}" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="input_sbytes">Source Bytes <span class="unit">(sbytes)</span></label>
+                <input type="number" step="1" name="sbytes" id="input_sbytes" class="form-control" value="{{ form_values.get('sbytes', 600) }}" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="input_dbytes">Destination Bytes <span class="unit">(dbytes)</span></label>
+                <input type="number" step="1" name="dbytes" id="input_dbytes" class="form-control" value="{{ form_values.get('dbytes', 600) }}" required>
+            </div>
+        </div>
+
+        <!-- Group 4: Load & Means -->
+        <div class="grid-4">
+            <div class="form-group">
+                <label class="form-label" for="input_sload">Source Load <span class="unit">(bps)</span></label>
+                <input type="number" step="any" name="sload" id="input_sload" class="form-control" value="{{ form_values.get('sload', 5000.0) }}" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="input_dload">Destination Load <span class="unit">(bps)</span></label>
+                <input type="number" step="any" name="dload" id="input_dload" class="form-control" value="{{ form_values.get('dload', 5000.0) }}" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="input_smean">Source Mean Size <span class="unit">(bytes)</span></label>
+                <input type="number" step="1" name="smean" id="input_smean" class="form-control" value="{{ form_values.get('smean', 60) }}" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="input_dmean">Destination Mean Size <span class="unit">(bytes)</span></label>
+                <input type="number" step="1" name="dmean" id="input_dmean" class="form-control" value="{{ form_values.get('dmean', 60) }}" required>
+            </div>
+        </div>
+
+        <!-- Submit Button -->
+        <div style="display: flex; gap: 1rem; margin-top: 1.5rem; border-top: 1px solid var(--border-color); padding-top: 1.25rem;">
+            <button type="submit" class="btn btn-primary" style="padding: 0.65rem 1.8rem;">
+                Predict
+            </button>
+            <a href="{{ url_for('predict_page') }}" class="btn btn-secondary">Reset Form</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

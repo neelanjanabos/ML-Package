@@ -1,0 +1,262 @@
+{% extends "base.html" %}
+
+{% block title %}Dataset - Network Attack Severity Prediction System{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Dataset</h1>
+    <p class="page-subtitle">Overview of the UNSW-NB15 network traffic dataset and attack severity categories.</p>
+</div>
+
+<!-- Dataset Overview Stat Cards -->
+<div class="grid-4" style="margin-bottom: 2rem;">
+    <div class="stat-card">
+        <span class="stat-label">Dataset Name</span>
+        <span class="stat-value" style="font-size: 1.4rem;">UNSW-NB15</span>
+        <span class="stat-sub">Network traffic dataset</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-label">Total Records</span>
+        <span class="stat-value">{{ "{:,}".format(rows_count) }}</span>
+        <span class="stat-sub">Dataset sample</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-label">Total Columns</span>
+        <span class="stat-value">{{ cols_count }}</span>
+        <span class="stat-sub">Features & label columns</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-label">Missing Values</span>
+        <span class="stat-value" style="color: var(--sev-low);">0</span>
+        <span class="stat-sub">Cleaned data</span>
+    </div>
+</div>
+
+<!-- Severity Mapping Card -->
+<div class="card">
+    <div class="card-header">
+        <div>
+            <h2 class="card-title">Severity Mapping</h2>
+            <p class="card-desc">Mapping of attack categories to four severity levels</p>
+        </div>
+    </div>
+    <p style="margin-bottom: 1.25rem; font-size: 0.92rem; color: var(--text-primary);">
+        The UNSW-NB15 dataset contains 10 attack categories. To predict the severity of an attack, each category is mapped to one of four understandable severity levels:
+    </p>
+
+    <div class="grid-4">
+        <!-- LOW -->
+        <div style="background-color: var(--sev-low-bg); border: 1px solid var(--sev-low-border); padding: 1rem; border-radius: var(--radius-sm);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                <span class="badge badge-low">LOW</span>
+                <span style="font-size: 0.8rem; font-weight: 700; color: #065f46;">{{ severity_counts.get('LOW', 0) }} records</span>
+            </div>
+            <strong style="font-size: 0.9rem; color: #065f46;">Normal</strong>
+            <p style="font-size: 0.8rem; color: #047857; margin-top: 0.35rem;">
+                Normal network traffic with no malicious activity.
+            </p>
+        </div>
+
+        <!-- MEDIUM -->
+        <div style="background-color: var(--sev-med-bg); border: 1px solid var(--sev-med-border); padding: 1rem; border-radius: var(--radius-sm);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                <span class="badge badge-medium">MEDIUM</span>
+                <span style="font-size: 0.8rem; font-weight: 700; color: #92400e;">{{ severity_counts.get('MEDIUM', 0) }} records</span>
+            </div>
+            <strong style="font-size: 0.9rem; color: #92400e;">Reconnaissance, Analysis, Fuzzers</strong>
+            <p style="font-size: 0.8rem; color: #b45309; margin-top: 0.35rem;">
+                Probing, port scanning, and automated input testing.
+            </p>
+        </div>
+
+        <!-- HIGH -->
+        <div style="background-color: var(--sev-high-bg); border: 1px solid var(--sev-high-border); padding: 1rem; border-radius: var(--radius-sm);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                <span class="badge badge-high">HIGH</span>
+                <span style="font-size: 0.8rem; font-weight: 700; color: #9a3412;">{{ severity_counts.get('HIGH', 0) }} records</span>
+            </div>
+            <strong style="font-size: 0.9rem; color: #9a3412;">DoS, Exploits, Generic</strong>
+            <p style="font-size: 0.8rem; color: #c2410c; margin-top: 0.35rem;">
+                Denial of service and known exploits targeting system availability.
+            </p>
+        </div>
+
+        <!-- CRITICAL -->
+        <div style="background-color: var(--sev-crit-bg); border: 1px solid var(--sev-crit-border); padding: 1rem; border-radius: var(--radius-sm);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                <span class="badge badge-critical">CRITICAL</span>
+                <span style="font-size: 0.8rem; font-weight: 700; color: #991b1b;">{{ severity_counts.get('CRITICAL', 0) }} records</span>
+            </div>
+            <strong style="font-size: 0.9rem; color: #991b1b;">Backdoor, Shellcode, Worms</strong>
+            <p style="font-size: 0.8rem; color: #b91c1c; margin-top: 0.35rem;">
+                Arbitrary code execution, unauthorized remote access, and spreading malware.
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- Class Distributions & Chart -->
+<div class="grid-2">
+    <!-- Chart -->
+    <div class="card">
+        <div class="card-header">
+            <div>
+                <h3 class="card-title">Attack Categories Distribution</h3>
+                <p class="card-desc">Number of records per attack category</p>
+            </div>
+        </div>
+        <div style="height: 300px; position: relative;">
+            <canvas id="datasetAttackChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Table of Classes -->
+    <div class="card">
+        <div class="card-header">
+            <div>
+                <h3 class="card-title">Class Distribution Table</h3>
+                <p class="card-desc">Exact record counts and severity levels</p>
+            </div>
+        </div>
+        <div class="table-responsive" style="max-height: 300px;">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Attack Category</th>
+                        <th>Severity Level</th>
+                        <th>Record Count</th>
+                        <th>Percentage</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for cat, count in attack_counts.items() %}
+                    <tr>
+                        <td><strong>{{ cat }}</strong></td>
+                        <td>
+                            {% set sev = severity_mapping.get(cat, 'LOW') %}
+                            <span class="badge badge-{{ sev | lower }}">{{ sev }}</span>
+                        </td>
+                        <td>{{ "{:,}".format(count) }}</td>
+                        <td>{{ "%.1f" | format((count / rows_count) * 100) }}%</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Features Information Table -->
+<div class="card">
+    <div class="card-header">
+        <div>
+            <h3 class="card-title">Feature Names & Descriptions</h3>
+            <p class="card-desc">The 14 features used for model training and prediction</p>
+        </div>
+    </div>
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Feature</th>
+                    <th>Name</th>
+                    <th>Type</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for feat in feature_columns %}
+                {% set info = feature_info.get(feat, {}) %}
+                <tr>
+                    <td><span class="code-text">{{ feat }}</span></td>
+                    <td><strong>{{ info.name }}</strong></td>
+                    <td>{{ info.unit }}</td>
+                    <td style="color: var(--text-secondary);">{{ info.desc }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Dataset Preview Table -->
+<div class="card">
+    <div class="card-header">
+        <div>
+            <h3 class="card-title">Dataset Preview (First 20 Records)</h3>
+            <p class="card-desc">Sample preview of features, attack category, and severity</p>
+        </div>
+    </div>
+    <div class="table-responsive">
+        <table class="data-table" style="font-size: 0.84rem;">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>dur</th>
+                    <th>proto</th>
+                    <th>service</th>
+                    <th>state</th>
+                    <th>sbytes</th>
+                    <th>dbytes</th>
+                    <th>rate</th>
+                    <th>smean</th>
+                    <th>dmean</th>
+                    <th>dport_ltm</th>
+                    <th>attack_cat</th>
+                    <th>severity</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in preview_data %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td>{{ "%.4f" | format(row.dur | float) }}</td>
+                    <td><span class="code-text">{{ row.proto }}</span></td>
+                    <td>{{ row.service }}</td>
+                    <td><span class="badge badge-gray">{{ row.state }}</span></td>
+                    <td>{{ row.sbytes }}</td>
+                    <td>{{ row.dbytes }}</td>
+                    <td>{{ "%.1f" | format(row.rate | float) }}</td>
+                    <td>{{ row.smean }}</td>
+                    <td>{{ row.dmean }}</td>
+                    <td>{{ row.ct_src_dport_ltm }}</td>
+                    <td><strong>{{ row.attack_cat }}</strong></td>
+                    <td>
+                        <span class="badge badge-{{ row.severity | lower }}">{{ row.severity }}</span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const attackData = {{ attack_counts | tojson }};
+        const ctx = document.getElementById('datasetAttackChart');
+        if (ctx) {
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(attackData),
+                    datasets: [{
+                        label: 'Record Count',
+                        data: Object.values(attackData),
+                        backgroundColor: '#3b82f6',
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

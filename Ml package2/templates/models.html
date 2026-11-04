@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+
+{% block title %}Model Comparison - Network Attack Severity Prediction System{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Model Comparison</h1>
+    <p class="page-subtitle">Performance evaluation of the five machine learning algorithms.</p>
+</div>
+
+<!-- Best Performing Model Callout -->
+<div class="alert alert-success" style="padding: 1rem 1.25rem;">
+    <strong>Best Performing Model: {{ best_model }}</strong> &mdash; 
+    Achieved the highest accuracy ({{ models_dict[best_model].accuracy }}%) and F1-score ({{ models_dict[best_model].f1_score }}%) on the test dataset.
+</div>
+
+<!-- Model Performance Table -->
+<div class="card">
+    <div class="card-header">
+        <div>
+            <h2 class="card-title">Performance Comparison Table</h2>
+            <p class="card-desc">Evaluated on the 25% test set (3,750 records) with random_state=42</p>
+        </div>
+    </div>
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Model</th>
+                    <th>Accuracy (%)</th>
+                    <th>Precision (%)</th>
+                    <th>Recall (%)</th>
+                    <th>F1 Score (%)</th>
+                    <th>Training Time</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for m in models_table %}
+                <tr class="{% if m.is_best %}row-best{% endif %}">
+                    <td>
+                        <strong>{{ m.name }}</strong>
+                        {% if m.is_best %}
+                            <span class="badge badge-low" style="margin-left: 6px;">Best Model</span>
+                        {% endif %}
+                    </td>
+                    <td><strong>{{ m.accuracy }}%</strong></td>
+                    <td>{{ m.precision }}%</td>
+                    <td>{{ m.recall }}%</td>
+                    <td><strong>{{ m.f1_score }}%</strong></td>
+                    <td>{{ m.train_time }}s</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Comparison Charts -->
+<div class="grid-2">
+    <!-- Accuracy Chart -->
+    <div class="card">
+        <div class="card-header">
+            <div>
+                <h3 class="card-title">Accuracy Comparison</h3>
+                <p class="card-desc">Comparison of classification accuracy across models</p>
+            </div>
+        </div>
+        <div style="height: 280px; position: relative;">
+            <canvas id="accuracyChart"></canvas>
+        </div>
+    </div>
+
+    <!-- F1-Score Chart -->
+    <div class="card">
+        <div class="card-header">
+            <div>
+                <h3 class="card-title">F1-Score Comparison</h3>
+                <p class="card-desc">Comparison of weighted F1-score across models</p>
+            </div>
+        </div>
+        <div style="height: 280px; position: relative;">
+            <canvas id="f1Chart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Confusion Matrices Section -->
+<div class="card">
+    <div class="card-header">
+        <div>
+            <h2 class="card-title">Confusion Matrices</h2>
+            <p class="card-desc">Confusion matrix for each model showing actual vs. predicted severity</p>
+        </div>
+    </div>
+
+    <!-- Algorithm Tabs -->
+    <div class="cm-tabs">
+        {% for name in models_dict.keys() %}
+        <button class="cm-tab-btn {% if name == best_model %}active{% endif %}" data-target="cm_{{ loop.index }}">
+            {{ name }}
+        </button>
+        {% endfor %}
+    </div>
+
+    <!-- Confusion Matrix Cards -->
+    <div class="cm-container">
+        {% for name, m in models_dict.items() %}
+        <div id="cm_{{ loop.index }}" class="cm-matrix-card" style="{% if name != best_model %}display: none;{% endif %} text-align: center;">
+            <div style="margin-bottom: 1rem;">
+                <h4 style="font-size: 1.05rem; color: var(--bg-header);">{{ name }}</h4>
+                <p style="font-size: 0.85rem; color: var(--text-secondary);">
+                    Accuracy: <strong>{{ m.accuracy }}%</strong> &bull; Precision: <strong>{{ m.precision }}%</strong> &bull; Recall: <strong>{{ m.recall }}%</strong> &bull; F1 Score: <strong>{{ m.f1_score }}%</strong>
+                </p>
+            </div>
+
+            <div class="table-responsive" style="display: inline-block;">
+                <table class="cm-matrix-grid">
+                    <thead>
+                        <tr>
+                            <th colspan="2" rowspan="2" style="background: transparent; border: none;"></th>
+                            <th colspan="4" style="background-color: #0f172a; color: #ffffff; text-transform: uppercase; font-size: 0.75rem;">
+                                Predicted Severity
+                            </th>
+                        </tr>
+                        <tr>
+                            {% for cls in classes %}
+                            <th style="min-width: 90px;"><span class="badge badge-{{ cls | lower }}">{{ cls }}</span></th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% set cm = m.confusion_matrix %}
+                        {% for row_idx in range(classes | length) %}
+                        <tr>
+                            {% if row_idx == 0 %}
+                            <th rowspan="4" style="background-color: #0f172a; color: #ffffff; writing-mode: vertical-lr; transform: rotate(180deg); font-size: 0.75rem; padding: 0.5rem;">
+                                Actual Severity
+                            </th>
+                            {% endif %}
+                            <th style="text-align: right; background-color: #f8fafc;">
+                                <span class="badge badge-{{ classes[row_idx] | lower }}">{{ classes[row_idx] }}</span>
+                            </th>
+                            {% for col_idx in range(classes | length) %}
+                                {% set count = cm[row_idx][col_idx] %}
+                                <td class="cm-cell {% if row_idx == col_idx and count > 0 %}heat-3{% elif count > 100 %}heat-2{% elif count > 0 %}heat-1{% else %}heat-0{% endif %}">
+                                    {{ count }}
+                                </td>
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div style="margin-top: 0.75rem; font-size: 0.82rem; color: var(--text-secondary);">
+                <span>Diagonal cells show correct predictions. Off-diagonal cells represent misclassifications.</span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Performance Discussion -->
+<div class="card">
+    <div class="card-header">
+        <div>
+            <h3 class="card-title">Performance Analysis</h3>
+            <p class="card-desc">Understanding why algorithm performance varies</p>
+        </div>
+    </div>
+    <div class="grid-2" style="font-size: 0.9rem; color: var(--text-primary);">
+        <div>
+            <h4 style="font-size: 0.95rem; margin-bottom: 0.4rem; color: var(--bg-header);">Decision Tree & KNN</h4>
+            <p style="color: var(--text-secondary);">
+                Decision Tree and KNN perform best (~85% accuracy). Network traffic data contains non-linear relationships and clear threshold boundaries (such as packet counts and durations) that tree-based partitioning and distance-based clustering capture well.
+            </p>
+        </div>
+        <div>
+            <h4 style="font-size: 0.95rem; margin-bottom: 0.4rem; color: var(--bg-header);">Naive Bayes & Linear Models</h4>
+            <p style="color: var(--text-secondary);">
+                Naive Bayes assumes that all input features are independent. However, network traffic features (like bytes, packets, and duration) are correlated, which reduces its accuracy (~55%). Logistic Regression and Linear SVM achieve moderate performance (~73%) using linear separation boundaries.
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const modelsData = {{ models_dict | tojson }};
+        initModelsCharts(modelsData);
+    });
+</script>
+{% endblock %}

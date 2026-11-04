@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+
+{% block title %}Home - Network Attack Severity Prediction System{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Network Attack Severity Prediction System</h1>
+    <p class="page-subtitle">Machine Learning based system for predicting the severity of network attacks.</p>
+</div>
+
+<!-- Key Stat Cards -->
+<div class="grid-4" style="margin-bottom: 2rem;">
+    <div class="stat-card">
+        <span class="stat-label">Dataset Records</span>
+        <span class="stat-value">{{ "{:,}".format(dataset_records) }}</span>
+        <span class="stat-sub">UNSW-NB15 records</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-label">Features</span>
+        <span class="stat-value">{{ features_count }}</span>
+        <span class="stat-sub">Traffic features analyzed</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-label">Attack Categories</span>
+        <span class="stat-value">{{ attack_count }}</span>
+        <span class="stat-sub">Different attack types</span>
+    </div>
+    <div class="stat-card highlight">
+        <span class="stat-label">Best Performing Model</span>
+        <span class="stat-value">{{ best_model }}</span>
+        <span class="stat-sub">Accuracy: <strong>{{ best_accuracy }}%</strong></span>
+    </div>
+</div>
+
+<!-- Distribution Charts Section -->
+<div class="grid-2">
+    <!-- Severity Distribution Chart -->
+    <div class="card">
+        <div class="card-header">
+            <div>
+                <h3 class="card-title">Severity Distribution</h3>
+                <p class="card-desc">Distribution of traffic records across the 4 severity levels</p>
+            </div>
+        </div>
+        <div style="height: 280px; position: relative;">
+            <canvas id="severityChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Attack Categories Chart -->
+    <div class="card">
+        <div class="card-header">
+            <div>
+                <h3 class="card-title">Attack Categories Distribution</h3>
+                <p class="card-desc">Distribution of records across attack categories</p>
+            </div>
+        </div>
+        <div style="height: 280px; position: relative;">
+            <canvas id="attackChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Navigation Cards -->
+<div class="grid-3" style="margin-top: 1rem;">
+    <div class="card" style="margin-bottom: 0;">
+        <h3 class="card-title" style="font-size: 1.05rem;">Dataset</h3>
+        <p style="font-size: 0.88rem; color: var(--text-secondary); margin: 0.5rem 0 1rem;">
+            Explore the UNSW-NB15 dataset, feature descriptions, and severity category mapping.
+        </p>
+        <a href="{{ url_for('dataset_page') }}" class="btn btn-secondary btn-sm" style="width: 100%;">View Dataset &rarr;</a>
+    </div>
+
+    <div class="card" style="margin-bottom: 0;">
+        <h3 class="card-title" style="font-size: 1.05rem;">Model Comparison</h3>
+        <p style="font-size: 0.88rem; color: var(--text-secondary); margin: 0.5rem 0 1rem;">
+            Compare Accuracy, Precision, Recall, F1-scores, and confusion matrices for the 5 algorithms.
+        </p>
+        <a href="{{ url_for('models_page') }}" class="btn btn-secondary btn-sm" style="width: 100%;">View Comparison &rarr;</a>
+    </div>
+
+    <div class="card" style="margin-bottom: 0;">
+        <h3 class="card-title" style="font-size: 1.05rem;">Predict Severity</h3>
+        <p style="font-size: 0.88rem; color: var(--text-secondary); margin: 0.5rem 0 1rem;">
+            Test single network traffic samples or upload a CSV file for prediction.
+        </p>
+        <a href="{{ url_for('predict_page') }}" class="btn btn-primary btn-sm" style="width: 100%;">Make Prediction &rarr;</a>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const severityData = {{ severity_distribution | tojson }};
+        const attackData = {{ attack_categories | tojson }};
+        initHomeCharts(severityData, attackData);
+    });
+</script>
+{% endblock %}

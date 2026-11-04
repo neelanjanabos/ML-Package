@@ -1,0 +1,230 @@
+{
+    "timestamp": "2026-10-07 18:11:21",
+    "total_records": 15000,
+    "features_count": 14,
+    "train_samples": 11250,
+    "test_samples": 3750,
+    "best_model": "KNN",
+    "best_accuracy": 85.39,
+    "best_f1": 85.04,
+    "models": {
+        "Logistic Regression": {
+            "accuracy": 73.28,
+            "precision": 73.23,
+            "recall": 73.28,
+            "f1_score": 72.8,
+            "train_time": 11.22,
+            "confusion_matrix": [
+                [
+                    823,
+                    153,
+                    222,
+                    0
+                ],
+                [
+                    53,
+                    370,
+                    233,
+                    0
+                ],
+                [
+                    85,
+                    192,
+                    1555,
+                    0
+                ],
+                [
+                    0,
+                    32,
+                    32,
+                    0
+                ]
+            ],
+            "classes": [
+                "LOW",
+                "MEDIUM",
+                "HIGH",
+                "CRITICAL"
+            ],
+            "has_proba": true
+        },
+        "Decision Tree": {
+            "accuracy": 85.17,
+            "precision": 84.58,
+            "recall": 85.17,
+            "f1_score": 84.79,
+            "train_time": 0.09,
+            "confusion_matrix": [
+                [
+                    1033,
+                    134,
+                    28,
+                    3
+                ],
+                [
+                    81,
+                    430,
+                    141,
+                    4
+                ],
+                [
+                    22,
+                    69,
+                    1723,
+                    18
+                ],
+                [
+                    5,
+                    9,
+                    42,
+                    8
+                ]
+            ],
+            "classes": [
+                "LOW",
+                "MEDIUM",
+                "HIGH",
+                "CRITICAL"
+            ],
+            "has_proba": true
+        },
+        "KNN": {
+            "accuracy": 85.39,
+            "precision": 84.77,
+            "recall": 85.39,
+            "f1_score": 85.04,
+            "train_time": 0.09,
+            "confusion_matrix": [
+                [
+                    1064,
+                    113,
+                    18,
+                    3
+                ],
+                [
+                    90,
+                    429,
+                    132,
+                    5
+                ],
+                [
+                    31,
+                    82,
+                    1700,
+                    19
+                ],
+                [
+                    7,
+                    10,
+                    38,
+                    9
+                ]
+            ],
+            "classes": [
+                "LOW",
+                "MEDIUM",
+                "HIGH",
+                "CRITICAL"
+            ],
+            "has_proba": true
+        },
+        "Naive Bayes": {
+            "accuracy": 55.39,
+            "precision": 78.03,
+            "recall": 55.39,
+            "f1_score": 58.02,
+            "train_time": 0.03,
+            "confusion_matrix": [
+                [
+                    751,
+                    296,
+                    32,
+                    119
+                ],
+                [
+                    1,
+                    624,
+                    10,
+                    21
+                ],
+                [
+                    178,
+                    805,
+                    696,
+                    153
+                ],
+                [
+                    0,
+                    58,
+                    0,
+                    6
+                ]
+            ],
+            "classes": [
+                "LOW",
+                "MEDIUM",
+                "HIGH",
+                "CRITICAL"
+            ],
+            "has_proba": true
+        },
+        "SVM": {
+            "accuracy": 72.75,
+            "precision": 73.23,
+            "recall": 72.75,
+            "f1_score": 71.97,
+            "train_time": 6.59,
+            "confusion_matrix": [
+                [
+                    749,
+                    174,
+                    275,
+                    0
+                ],
+                [
+                    19,
+                    375,
+                    262,
+                    0
+                ],
+                [
+                    81,
+                    147,
+                    1604,
+                    0
+                ],
+                [
+                    0,
+                    26,
+                    38,
+                    0
+                ]
+            ],
+            "classes": [
+                "LOW",
+                "MEDIUM",
+                "HIGH",
+                "CRITICAL"
+            ],
+            "has_proba": true
+        }
+    },
+    "attack_categories": {
+        "Normal": 4791,
+        "Generic": 3430,
+        "Exploits": 2831,
+        "Fuzzers": 1573,
+        "DoS": 1067,
+        "Reconnaissance": 893,
+        "Analysis": 158,
+        "Backdoor": 148,
+        "Shellcode": 99,
+        "Worms": 10
+    },
+    "severity_distribution": {
+        "HIGH": 7328,
+        "LOW": 4791,
+        "MEDIUM": 2624,
+        "CRITICAL": 257
+    }
+}
